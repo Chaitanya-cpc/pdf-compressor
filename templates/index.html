@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Compressor — CPCL Suite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1220; --panel: #111827; --line: rgba(148,163,184,.32);
+      --text: #e5e7eb; --muted: #94a3b8; --accent: #0ea5e9; --accent-2: #64748b;
+      --ok: #4ade80; --bad: #fca5a5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: "IBM Plex Sans", sans-serif; color: var(--text);
+      background:
+        radial-gradient(900px 420px at 10% -10%, rgba(14,165,233,.16), transparent 55%),
+        radial-gradient(700px 360px at 100% 0%, rgba(100,116,139,.18), transparent 50%),
+        var(--bg);
+    }
+    .top {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 14px 20px; border-bottom: 1px solid var(--line);
+      background: rgba(17,24,39,.85); backdrop-filter: blur(10px);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .brand { display: flex; flex-direction: column; gap: 2px; }
+    .brand strong { font-size: 1rem; letter-spacing: .02em; }
+    .brand span { color: var(--muted); font-size: .8rem; }
+    .user { color: var(--muted); font-size: .88rem; display: flex; gap: 14px; align-items: center; }
+    .user a { color: var(--accent); text-decoration: none; }
+    main { max-width: 760px; margin: 0 auto; padding: 28px 18px 48px; }
+    h1 {
+      font-family: "IBM Plex Serif", Georgia, serif; font-weight: 500;
+      font-size: clamp(1.55rem, 3vw, 2rem); margin: 8px 0 8px; line-height: 1.25;
+    }
+    .lede { color: var(--muted); margin: 0 0 22px; max-width: 40rem; line-height: 1.5; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px;
+    }
+    .drop {
+      border: 1.5px dashed rgba(148,163,184,.45); border-radius: 12px; padding: 28px 18px;
+      text-align: center; background: rgba(15,23,42,.55); cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .drop.drag { border-color: var(--accent); background: rgba(14,165,233,.08); }
+    .drop strong { display: block; margin-bottom: 6px; }
+    .drop span { color: var(--muted); font-size: .9rem; }
+    .file-list { display: none; margin-top: 14px; text-align: left; max-height: 200px; overflow: auto; }
+    .file-list.show { display: block; }
+    .file-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 8px 10px; border-radius: 8px; margin-top: 6px;
+      background: rgba(14,165,233,.1); border: 1px solid rgba(14,165,233,.35); font-size: .88rem;
+    }
+    .file-row button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font: inherit; font-size: .8rem; }
+    .file-row button:hover { color: var(--bad); }
+    .batch-meta { color: var(--muted); font-size: .82rem; margin-top: 8px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+    @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+    label { display: block; color: var(--muted); font-size: .85rem; margin-bottom: 6px; }
+    select, input[type="number"], input[type="password"], input[type="text"], input[type="range"] {
+      width: 100%; padding: 10px 12px; border-radius: 8px;
+      border: 1px solid var(--line); background: #0b1220; color: var(--text); font: inherit;
+    }
+    input[type="range"] { padding: 0; height: 28px; accent-color: var(--accent); cursor: pointer; background: transparent; border: 0; }
+    .slider-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+    .slider-head label { margin: 0; }
+    .slider-value { font-variant-numeric: tabular-nums; font-weight: 600; color: #fff; font-size: 1.05rem; }
+    .slider-value span { color: var(--muted); font-weight: 500; font-size: .85rem; }
+    .slider-ends { display: flex; justify-content: space-between; color: var(--muted); font-size: .75rem; margin-top: 4px; }
+    .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .presets button {
+      border: 1px solid var(--line); background: transparent; color: var(--muted);
+      border-radius: 999px; padding: 5px 10px; font: inherit; font-size: .8rem; cursor: pointer;
+    }
+    .presets button:hover, .presets button.active { color: #fff; border-color: var(--accent); background: rgba(14,165,233,.15); }
+    .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin-top: 14px; }
+    @media (max-width: 560px) { .opts { grid-template-columns: 1fr; } }
+    .opt {
+      display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .85rem;
+      padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: rgba(15,23,42,.45);
+    }
+    .opt input { width: auto; accent-color: var(--accent); }
+    .hint { color: var(--muted); font-size: .82rem; margin-top: 10px; line-height: 1.4; }
+    .note {
+      display: none; margin: 10px 0 0; padding: 10px 12px; border-radius: 8px;
+      background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.35);
+      color: #fde68a; font-size: .88rem; line-height: 1.4;
+    }
+    .note.show { display: block; }
+    .actions { margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      border: 0; border-radius: 999px; padding: 11px 20px; font: inherit; font-weight: 600;
+      cursor: pointer; color: #fff; background: linear-gradient(90deg, var(--accent-2), var(--accent));
+      text-decoration: none; display: inline-block;
+    }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+    .btn.danger { background: transparent; border: 1px solid rgba(252,165,165,.5); color: var(--bad); }
+    .status {
+      display: none; margin-top: 18px; padding: 14px; border-radius: 10px;
+      border: 1px solid var(--line); background: rgba(15,23,42,.6);
+    }
+    .status.show { display: block; }
+    .status h3 { margin: 0 0 8px; font-size: 1rem; }
+    .status .msg { color: var(--muted); font-size: .9rem; margin-bottom: 8px; }
+    .bar { height: 8px; border-radius: 999px; background: rgba(148,163,184,.15); overflow: hidden; margin: 8px 0 4px; }
+    .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width .3s; }
+    .eta { color: var(--muted); font-size: .78rem; margin-bottom: 8px; }
+    .log { font-family: ui-monospace, monospace; font-size: .78rem; color: #cbd5e1; max-height: 140px; overflow: auto; white-space: pre-wrap; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 12px 0; }
+    @media (max-width: 560px) { .stats { grid-template-columns: 1fr; } }
+    .stat { padding: 10px; border-radius: 8px; background: rgba(148,163,184,.08); border: 1px solid var(--line); }
+    .stat b { display: block; font-size: 1.05rem; margin-top: 2px; }
+    .stat span { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+    .file-status-list { margin: 12px 0 0; display: flex; flex-direction: column; gap: 6px; }
+    .file-status {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+      padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+      background: rgba(148,163,184,.06); font-size: .85rem;
+    }
+    .file-status .name { font-weight: 500; }
+    .file-status .meta { color: var(--muted); font-size: .78rem; margin-top: 2px; }
+    .file-status a { color: var(--accent); font-size: .8rem; text-decoration: none; white-space: nowrap; }
+    .previews { display: none; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+    .previews.show { display: grid; }
+    .previews figure { margin: 0; }
+    .previews img {
+      width: 100%; border-radius: 8px; border: 1px solid var(--line); background: #000; min-height: 120px; object-fit: contain;
+    }
+    .previews figcaption { color: var(--muted); font-size: .75rem; margin-top: 4px; text-align: center; }
+    .history { margin-top: 22px; }
+    .history h2 { font-size: 1rem; margin: 0 0 10px; font-weight: 600; }
+    .hist-item {
+      padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line);
+      background: rgba(15,23,42,.45); margin-bottom: 8px; font-size: .85rem;
+    }
+    .hist-item .meta { color: var(--muted); font-size: .78rem; margin-top: 4px; }
+    .error { color: var(--bad); }
+    .ok { color: var(--ok); }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <strong>PDF Compressor</strong>
+      <span>CPCL Suite · ScanClear clarity pipeline</span>
+    </div>
+    <div class="user">
+      {% if current_user %}
+        <span>{{ current_user.name or current_user.employee_id }}</span>
+      {% endif %}
+      <a href="https://suite.cpcl.cloud">Suite</a>
+      <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+  </header>
+
+  <main>
+    <h1>Compress scanned PDFs to portal size — keep text sharp.</h1>
+    <p class="lede">
+      Binary-search ScanClear pipeline with streaming pages, deskew/crop, clarity gate,
+      native-PDF path, per-page colour, up to {{ max_pages }} pages, parallel multi-file compress, merge/ZIP download, and cancel.
+    </p>
+
+    <div class="panel">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload PDFs">
+        <strong>Drop PDFs here, or click to choose</strong>
+        <span>
+          Up to {{ max_batch_files }} files · {{ max_upload_mb }} MB each · {{ max_batch_mb }} MB total ·
+          {{ max_pages }} pages/file
+        </span>
+        <div class="file-list" id="fileList"></div>
+        <div class="batch-meta" id="batchMeta"></div>
+      </div>
+      <input type="file" id="fileInput" accept="application/pdf,.pdf" multiple hidden>
+
+      <div style="margin-top:18px">
+        <label>Compression strategy</label>
+        <div class="presets" id="strategyPresets" style="margin-top:6px">
+          <button type="button" data-strategy="quality" class="active">Quality</button>
+          <button type="button" data-strategy="fast">Fast</button>
+        </div>
+        <p class="hint" id="strategyHint">Quality: ScanClear clarity ladder (sharp text). Fast: fewer/coarser steps like typical online compressors — quicker, softer.</p>
+        <input type="hidden" id="strategy" value="quality">
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="slider-head">
+            <label for="targetMb">Target size (per file)</label>
+            <div class="slider-value" id="targetLabel">2.0 <span>MB</span></div>
+          </div>
+          <input type="range" id="targetMb" min="0" max="50" step="0.1" value="2">
+          <div class="slider-ends"><span>0 MB</span><span>50 MB</span></div>
+          <div class="presets" id="presets">
+            <button type="button" data-mb="1">1</button>
+            <button type="button" data-mb="2" class="active">2</button>
+            <button type="button" data-mb="5">5</button>
+            <button type="button" data-mb="10">10</button>
+            <button type="button" data-mb="20">20</button>
+            <button type="button" data-mb="50">50</button>
+          </div>
+        </div>
+        <div>
+          <label for="mode">Mode</label>
+          <select id="mode">
+            <option value="auto" selected>Auto (recommended)</option>
+            <option value="mono">Mono — max clarity / size</option>
+            <option value="gray">Gray — keep tones / stamps</option>
+            <option value="color">Colour — try colour, gray if needed</option>
+            <option value="per_page">Per-page — colour only where needed</option>
+          </select>
+          <p class="hint" id="modeHint">Auto tries mono first, then gray. Native text PDFs use object compression.</p>
+          <div id="colorPagesWrap" style="display:none;margin-top:12px">
+            <label for="colorPages">Force-colour page numbers (per-page mode)</label>
+            <input type="text" id="colorPages" placeholder="e.g. 1, 3, 5-8, 12" autocomplete="off">
+            <p class="hint">These pages stay in colour; other pages use auto detection (colour if stamps/photos).</p>
+          </div>
+          <label for="pdfPassword" style="margin-top:12px">PDF password (if locked)</label>
+          <input type="password" id="pdfPassword" placeholder="Optional" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="opts">
+        <label class="opt"><input type="checkbox" id="optDeskew" checked> Deskew pages</label>
+        <label class="opt"><input type="checkbox" id="optCrop" checked> Crop blank margins</label>
+        <label class="opt"><input type="checkbox" id="optClarity" checked> Clarity gate</label>
+        <label class="opt"><input type="checkbox" id="optSplit" checked> Auto-split &gt;{{ split_pages }} pages</label>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="compressBtn" disabled>Compress</button>
+        <button class="btn danger" id="cancelBtn" type="button" style="display:none">Cancel</button>
+        <button class="btn ghost" id="resetBtn" type="button">Reset</button>
+      </div>
+
+      <div class="status" id="statusBox">
+        <h3 id="statusTitle">Working…</h3>
+        <div class="msg" id="statusMsg"></div>
+        <div class="bar"><i id="progressBar"></i></div>
+        <div class="eta" id="etaLine"></div>
+        <div class="note" id="statusNote"></div>
+        <div class="previews" id="previews">
+          <figure>
+            <img id="previewOrig" alt="Original preview">
+            <figcaption>Original (page 1)</figcaption>
+          </figure>
+          <figure>
+            <img id="previewComp" alt="Compressed preview">
+            <figcaption>Compressed (page 1)</figcaption>
+          </figure>
+        </div>
+        <div class="stats" id="stats" style="display:none">
+          <div class="stat"><span>Before</span><b id="statBefore">—</b></div>
+          <div class="stat"><span>After</span><b id="statAfter">—</b></div>
+          <div class="stat"><span>Saved</span><b id="statSaved">—</b></div>
+        </div>
+        <div class="file-status-list" id="fileStatusList"></div>
+        <div class="log" id="progressLog"></div>
+        <div class="actions" id="downloadRow" style="display:none">
+          <a class="btn" id="downloadBtn" href="#">Download</a>
+          <a class="btn ghost" id="downloadZipBtn" href="#" style="display:none">Download separate (ZIP)</a>
+          <a class="btn ghost" id="downloadMergeBtn" href="#" style="display:none">Download merged PDF</a>
+        </div>
+      </div>
+    </div>
+
+    <section class="history panel" style="margin-top:18px">
+      <h2>Recent jobs</h2>
+      <div id="historyList"><div class="hist-item meta">Loading…</div></div>
+    </section>
+  </main>
+
+  <script>
+    const BASE = {{ request.script_root|tojson }};
+    const MAX_BATCH_FILES = {{ max_batch_files|int }};
+    const MAX_UPLOAD_MB = {{ max_upload_mb|int }};
+    const MAX_BATCH_MB = {{ max_batch_mb|int }};
+    const drop = document.getElementById('drop');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const batchMeta = document.getElementById('batchMeta');
+    const compressBtn = document.getElementById('compressBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const targetMb = document.getElementById('targetMb');
+    const targetLabel = document.getElementById('targetLabel');
+    const mode = document.getElementById('mode');
+    const modeHint = document.getElementById('modeHint');
+    const pdfPassword = document.getElementById('pdfPassword');
+    const statusBox = document.getElementById('statusBox');
+    const statusTitle = document.getElementById('statusTitle');
+    const statusMsg = document.getElementById('statusMsg');
+    const statusNote = document.getElementById('statusNote');
+    const progressLog = document.getElementById('progressLog');
+    const progressBar = document.getElementById('progressBar');
+    const etaLine = document.getElementById('etaLine');
+    const stats = document.getElementById('stats');
+    const fileStatusList = document.getElementById('fileStatusList');
+    const downloadRow = document.getElementById('downloadRow');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const previews = document.getElementById('previews');
+    const previewOrig = document.getElementById('previewOrig');
+    const previewComp = document.getElementById('previewComp');
+    let selectedFiles = [];
+    let pollTimer = null;
+    let currentJobId = null;
+
+    const MODE_HINTS = {
+      auto: 'Auto: mono first, then gray. Born-digital PDFs use object compression when possible.',
+      mono: '1-bit Group-4 — sharpest text and smallest files.',
+      gray: 'Grayscale JPEG — keeps stamp/photo tone without colour.',
+      color: 'Colour JPEG first; falls back to gray if the target cannot be hit.',
+      per_page: 'Colour on selected page numbers (below) plus any pages that look colourful; rest mono.',
+    };
+
+    function syncTargetUi() {
+      const v = parseFloat(targetMb.value || '2');
+      targetLabel.innerHTML = v.toFixed(1) + ' <span>MB</span>';
+      document.querySelectorAll('#presets button').forEach(b => {
+        b.classList.toggle('active', Math.abs(parseFloat(b.dataset.mb) - v) < 0.001);
+      });
+    }
+    const colorPagesWrap = document.getElementById('colorPagesWrap');
+    const colorPages = document.getElementById('colorPages');
+    const downloadZipBtn = document.getElementById('downloadZipBtn');
+    const downloadMergeBtn = document.getElementById('downloadMergeBtn');
+
+    function syncModeHint() {
+      modeHint.textContent = MODE_HINTS[mode.value] || MODE_HINTS.auto;
+      colorPagesWrap.style.display = mode.value === 'per_page' ? 'block' : 'none';
+    }
+    const strategyInput = document.getElementById('strategy');
+    const strategyHint = document.getElementById('strategyHint');
+    const STRATEGY_HINTS = {
+      quality: 'Quality: ScanClear clarity ladder (sharp text, more attempts).',
+      fast: 'Fast: coarse JPEG/size crush like typical online tools — quicker, lower clarity.',
+    };
+    function syncStrategy() {
+      const v = strategyInput.value || 'quality';
+      strategyHint.textContent = STRATEGY_HINTS[v] || STRATEGY_HINTS.quality;
+      document.querySelectorAll('#strategyPresets button').forEach(b => {
+        b.classList.toggle('active', b.dataset.strategy === v);
+      });
+      // Fast: clarity/deskew less relevant — leave user toggles but hint
+    }
+    document.getElementById('strategyPresets').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-strategy]');
+      if (!btn) return;
+      strategyInput.value = btn.dataset.strategy;
+      syncStrategy();
+    });
+
+    targetMb.addEventListener('input', syncTargetUi);
+    mode.addEventListener('change', syncModeHint);
+    syncTargetUi(); syncModeHint(); syncStrategy();
+
+    function fmtBytes(n) {
+      if (n == null) return '—';
+      const mb = n / 1024 / 1024;
+      return mb >= 1 ? mb.toFixed(2) + ' MB' : (n / 1024).toFixed(0) + ' KB';
+    }
+    function fmtEta(sec) {
+      if (sec == null || sec < 0) return '';
+      if (sec < 5) return 'Almost done';
+      if (sec < 60) return `~${Math.round(sec)}s left`;
+      return `~${Math.round(sec / 60)} min left`;
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function renderFileList() {
+      if (!selectedFiles.length) {
+        fileList.classList.remove('show'); fileList.innerHTML = ''; batchMeta.textContent = '';
+        compressBtn.disabled = true; compressBtn.textContent = 'Compress'; return;
+      }
+      fileList.classList.add('show');
+      fileList.innerHTML = selectedFiles.map((f, i) =>
+        `<div class="file-row"><span>${escapeHtml(f.name)} · ${fmtBytes(f.size)}</span>
+         <button type="button" data-remove="${i}">Remove</button></div>`
+      ).join('');
+      const total = selectedFiles.reduce((s, f) => s + f.size, 0);
+      batchMeta.textContent = selectedFiles.length === 1 ? '1 file selected' : `${selectedFiles.length} files · ${fmtBytes(total)} total`;
+      compressBtn.disabled = false;
+      compressBtn.textContent = selectedFiles.length === 1 ? 'Compress' : `Compress ${selectedFiles.length} PDFs`;
+    }
+
+    function addFiles(fileListLike) {
+      for (const file of Array.from(fileListLike || [])) {
+        if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { alert(`Skipped non-PDF: ${file.name}`); continue; }
+        if (file.size > MAX_UPLOAD_MB * 1024 * 1024) { alert(`${file.name} exceeds ${MAX_UPLOAD_MB} MB.`); continue; }
+        if (selectedFiles.some(f => f.name === file.name && f.size === file.size)) continue;
+        if (selectedFiles.length >= MAX_BATCH_FILES) { alert(`At most ${MAX_BATCH_FILES} PDFs.`); break; }
+        selectedFiles.push(file);
+      }
+      while (selectedFiles.length && selectedFiles.reduce((s, f) => s + f.size, 0) > MAX_BATCH_MB * 1024 * 1024) {
+        selectedFiles.pop(); alert(`Total upload must be ≤ ${MAX_BATCH_MB} MB.`);
+      }
+      renderFileList();
+    }
+
+    fileList.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-remove]');
+      if (!btn) return; e.stopPropagation();
+      selectedFiles.splice(parseInt(btn.dataset.remove, 10), 1); renderFileList();
+    });
+    drop.addEventListener('click', (e) => { if (!e.target.closest('[data-remove]')) fileInput.click(); });
+    drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+    fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+    ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+    ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+    drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+    document.getElementById('presets').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-mb]'); if (!btn) return;
+      targetMb.value = btn.dataset.mb; syncTargetUi();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      selectedFiles = []; fileInput.value = ''; renderFileList();
+      statusBox.classList.remove('show'); statusNote.classList.remove('show');
+      fileStatusList.innerHTML = ''; previews.classList.remove('show');
+      cancelBtn.style.display = 'none'; currentJobId = null;
+      if (pollTimer) clearInterval(pollTimer);
+    });
+
+    cancelBtn.addEventListener('click', async () => {
+      if (!currentJobId) return;
+      cancelBtn.disabled = true;
+      try {
+        await fetch(BASE + '/api/jobs/' + currentJobId + '/cancel', { method: 'POST' });
+        statusMsg.textContent = 'Cancel requested…';
+      } catch (e) {}
+    });
+
+    function showRunning(msg) {
+      statusBox.classList.add('show');
+      statusTitle.textContent = 'Compressing…'; statusTitle.className = '';
+      statusMsg.textContent = msg || 'Starting…';
+      statusNote.classList.remove('show'); stats.style.display = 'none';
+      downloadRow.style.display = 'none'; fileStatusList.innerHTML = '';
+      previews.classList.remove('show'); progressBar.style.width = '0%'; etaLine.textContent = '';
+      cancelBtn.style.display = 'inline-block'; cancelBtn.disabled = false;
+    }
+
+    function renderFileStatuses(jobId, files) {
+      if (!files || !files.length) { fileStatusList.innerHTML = ''; return; }
+      fileStatusList.innerHTML = files.map(f => {
+        const st = f.status || '';
+        const cls = st === 'done' ? 'ok' : (st === 'error' || st === 'cancelled' ? 'error' : '');
+        const sizeBit = f.compressed_bytes != null
+          ? `${fmtBytes(f.original_bytes)} → ${fmtBytes(f.compressed_bytes)}`
+          : fmtBytes(f.original_bytes);
+        let links = '';
+        if (st === 'done') {
+          links = `<a href="${BASE}/api/jobs/${jobId}/download?index=${f.index}">Download</a>`;
+          if (f.parts && f.parts.length) {
+            links += ' ' + f.parts.map((_, pi) =>
+              `<a href="${BASE}/api/jobs/${jobId}/download?index=${f.index}&part=${pi}">Part ${pi+1}</a>`
+            ).join(' ');
+          }
+        }
+        return `<div class="file-status"><div>
+          <div class="name ${cls}">${escapeHtml(f.original_filename || 'file')}</div>
+          <div class="meta">${escapeHtml(f.message || st)} · ${sizeBit}</div>
+        </div>${links}</div>`;
+      }).join('');
+    }
+
+    function updatePreviews(jobId, data) {
+      const hasO = data.preview_original || (data.files && data.files[0] && data.files[0].preview_original);
+      const hasC = data.preview_compressed || (data.files && data.files[0] && data.files[0].preview_compressed);
+      if (!hasO && !hasC) { previews.classList.remove('show'); return; }
+      previews.classList.add('show');
+      const bust = Date.now();
+      if (hasO) previewOrig.src = BASE + '/api/jobs/' + jobId + '/preview/original?index=0&t=' + bust;
+      if (hasC) previewComp.src = BASE + '/api/jobs/' + jobId + '/preview/compressed?index=0&t=' + bust;
+    }
+
+    async function poll(jobId) {
+      const res = await fetch(BASE + '/api/jobs/' + jobId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Status check failed');
+      statusMsg.textContent = data.message || '';
+      progressLog.textContent = (data.progress || []).join('\n');
+      if (data.percent != null) progressBar.style.width = Math.max(0, Math.min(100, data.percent)) + '%';
+      etaLine.textContent = fmtEta(data.eta_seconds);
+      renderFileStatuses(jobId, data.files);
+      if (data.preview_original || data.preview_compressed) updatePreviews(jobId, data);
+
+      if (data.status === 'done' || data.status === 'cancelled' || data.status === 'error') {
+        clearInterval(pollTimer); compressBtn.disabled = false; cancelBtn.style.display = 'none';
+        loadHistory();
+      }
+      if (data.status === 'done') {
+        statusTitle.textContent = 'Ready'; statusTitle.className = 'ok';
+        progressBar.style.width = '100%';
+        const batchSize = data.batch_size || (data.files || []).length || 1;
+        stats.style.display = 'grid';
+        if (batchSize <= 1) {
+          document.getElementById('statBefore').textContent = fmtBytes(data.original_bytes);
+          document.getElementById('statAfter').textContent = fmtBytes(data.compressed_bytes);
+          document.getElementById('statSaved').textContent = (data.reduction_percent ?? 0) + '% · ' + (data.mode_used || '');
+        } else {
+          document.getElementById('statBefore').textContent = (data.done_count || 0) + ' ok';
+          document.getElementById('statAfter').textContent = (data.error_count || 0) + ' failed';
+          document.getElementById('statSaved').textContent = batchSize + ' files';
+        }
+        if (data.note) { statusNote.textContent = data.note; statusNote.classList.add('show'); }
+        else { statusNote.classList.remove('show'); }
+        updatePreviews(jobId, data);
+        downloadRow.style.display = 'flex';
+        const multi = (data.batch_size || 1) > 1 && (data.done_count || 0) >= 2;
+        if (multi) {
+          downloadBtn.href = BASE + '/api/jobs/' + jobId + '/download?as=zip';
+          downloadBtn.textContent = 'Download separate (ZIP)';
+          downloadZipBtn.style.display = 'none';
+          if (data.merged_file || data.can_merge) {
+            downloadMergeBtn.href = BASE + '/api/jobs/' + jobId + '/download?as=merge';
+            downloadMergeBtn.style.display = 'inline-block';
+            downloadMergeBtn.textContent = 'Download merged PDF';
+          } else {
+            downloadMergeBtn.style.display = 'none';
+          }
+        } else {
+          downloadBtn.href = BASE + '/api/jobs/' + jobId + '/download';
+          downloadBtn.textContent = 'Download compressed PDF';
+          downloadZipBtn.style.display = 'none';
+          downloadMergeBtn.style.display = 'none';
+        }
+        return;
+      }
+      if (data.status === 'cancelled') {
+        statusTitle.textContent = 'Cancelled'; statusTitle.className = 'error';
+        return;
+      }
+      if (data.status === 'error') {
+        statusTitle.textContent = 'Failed'; statusTitle.className = 'error';
+        statusMsg.textContent = data.error || data.message || 'Compression failed.';
+      }
+    }
+
+    compressBtn.addEventListener('click', async () => {
+      if (!selectedFiles.length) return;
+      compressBtn.disabled = true;
+      showRunning(selectedFiles.length > 1 ? `Uploading ${selectedFiles.length} PDFs…` : 'Uploading…');
+      progressLog.textContent = '';
+      const fd = new FormData();
+      selectedFiles.forEach(f => fd.append('files', f));
+      const target = parseFloat(targetMb.value || '2');
+      fd.append('target_mb', String(target === 0 ? 0.1 : target));
+      fd.append('mode', mode.value || 'auto');
+      fd.append('strategy', strategyInput.value || 'quality');
+      if (mode.value === 'per_page' && colorPages.value.trim()) {
+        fd.append('color_pages', colorPages.value.trim());
+      }
+      if (pdfPassword.value) fd.append('pdf_password', pdfPassword.value);
+      fd.append('deskew', document.getElementById('optDeskew').checked ? '1' : '0');
+      fd.append('crop', document.getElementById('optCrop').checked ? '1' : '0');
+      fd.append('clarity_gate', document.getElementById('optClarity').checked ? '1' : '0');
+      fd.append('auto_split', document.getElementById('optSplit').checked ? '1' : '0');
+      try {
+        const res = await fetch(BASE + '/api/jobs', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        currentJobId = data.job_id;
+        showRunning('Queued…');
+        if (pollTimer) clearInterval(pollTimer);
+        await poll(data.job_id);
+        pollTimer = setInterval(() => poll(data.job_id).catch(err => {
+          clearInterval(pollTimer);
+          statusTitle.textContent = 'Error'; statusTitle.className = 'error';
+          statusMsg.textContent = err.message; compressBtn.disabled = false; cancelBtn.style.display = 'none';
+        }), 1000);
+      } catch (err) {
+        statusBox.classList.add('show');
+        statusTitle.textContent = 'Error'; statusTitle.className = 'error';
+        statusMsg.textContent = err.message; compressBtn.disabled = false; cancelBtn.style.display = 'none';
+      }
+    });
+
+    async function loadHistory() {
+      try {
+        const res = await fetch(BASE + '/api/history');
+        const data = await res.json();
+        const items = data.items || [];
+        const el = document.getElementById('historyList');
+        if (!items.length) { el.innerHTML = '<div class="hist-item meta">No recent jobs yet.</div>'; return; }
+        el.innerHTML = items.map(it => {
+          const when = (it.finished_at || it.created_at || '').replace('T', ' ').slice(0, 19);
+          const names = (it.files || []).map(f => f.name).filter(Boolean).slice(0, 3).join(', ');
+          const more = (it.files || []).length > 3 ? '…' : '';
+          const link = it.status === 'done'
+            ? ` · <a href="${BASE}/api/jobs/${it.job_id}/download">Download</a>`
+            : '';
+          return `<div class="hist-item">
+            <div><strong class="${it.status==='done'?'ok':(it.status==='error'?'error':'')}">${escapeHtml(it.status || '')}</strong>
+              — ${escapeHtml(it.message || '')}${link}</div>
+            <div class="meta">${escapeHtml(when)} · ${escapeHtml(names + more)}</div>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        document.getElementById('historyList').innerHTML = '<div class="hist-item meta">Could not load history.</div>';
+      }
+    }
+    loadHistory();
+  </script>
+</body>
+</html>

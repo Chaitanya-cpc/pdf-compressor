@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Password — PDF Compressor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+      font-family:"IBM Plex Sans",sans-serif; background:#0b1220; color:#e5e7eb; }
+    .card { width:100%; max-width:420px; margin:16px; border:1px solid rgba(148,163,184,.35); border-radius:12px; background:#111827; padding:22px; }
+    h1 { margin:0 0 6px; font-size:1.2rem; }
+    p { color:#94a3b8; margin:0 0 16px; font-size:.9rem; }
+    label { display:block; color:#94a3b8; font-size:.88rem; margin:0 0 6px; }
+    input { width:100%; box-sizing:border-box; margin-bottom:14px; padding:10px 12px; border-radius:8px; border:1px solid rgba(148,163,184,.35); background:#0b1220; color:#e5e7eb; font:inherit; }
+    button { width:100%; border:0; border-radius:999px; padding:11px; font:inherit; font-weight:600; color:#fff; background:linear-gradient(90deg,#475569,#0ea5e9); cursor:pointer; }
+    .flash { margin-bottom:12px; padding:10px; border-radius:8px; background:rgba(248,113,113,.12); border:1px solid rgba(248,113,113,.4); color:#fecaca; }
+    .flash.ok { background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.4); color:#86efac; }
+    .foot { text-align:center; margin-top:14px; color:#64748b; font-size:.88rem; }
+    a { color:#38bdf8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Reset password</h1>
+    <p>Admin approval is required. Your current password keeps working until the reset is approved.</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    <form method="post">
+      <label>Employee ID</label>
+      <input name="employee_id" required autofocus>
+      <label>New password</label>
+      <input type="password" name="password" required minlength="6">
+      <label>Confirm new password</label>
+      <input type="password" name="confirm_password" required minlength="6">
+      <button type="submit">Request password reset</button>
+    </form>
+    <div class="foot"><a href="{{ url_for('login') }}">Back to login</a></div>
+  </div>
+</body>
+</html>
