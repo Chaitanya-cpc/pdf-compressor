@@ -26,6 +26,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
 import auth
+from secrets_env import load_secrets
 
 APP_ROOT = Path(__file__).resolve().parent
 JOBS_DIR = APP_ROOT / "data" / "jobs"
@@ -40,6 +41,8 @@ MAX_DISK_MB = int(os.environ.get("MAX_DISK_MB", "4000"))
 SPLIT_PAGES = int(os.environ.get("SPLIT_PAGES", "80"))
 APP_URL = os.environ.get("APP_URL", "https://plugin.erudore.com")
 APP_NAME = "PDF Compressor"
+
+load_secrets()
 
 log = logging.getLogger(__name__)
 
