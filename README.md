@@ -2,6 +2,8 @@
 
 Web app at **https://pdf.cpcl.cloud** (also via suite `/pdf-compressor/`).
 
+A new developer should start with **[docs/PRD.md](docs/PRD.md)**. It is the full product contract: screens, API, auth, the compression algorithm, deployment, and acceptance tests.
+
 ## Features
 
 1. Binary-search quality ladder (stop at first fit under target)
