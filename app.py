@@ -38,7 +38,7 @@ MAX_BATCH_FILES = int(os.environ.get("MAX_BATCH_FILES", "15"))
 MAX_BATCH_MB = int(os.environ.get("MAX_BATCH_MB", "500"))
 MAX_DISK_MB = int(os.environ.get("MAX_DISK_MB", "4000"))
 SPLIT_PAGES = int(os.environ.get("SPLIT_PAGES", "80"))
-APP_URL = os.environ.get("APP_URL", "https://pdf.cpcl.cloud")
+APP_URL = os.environ.get("APP_URL", "https://plugin.erudore.com")
 APP_NAME = "PDF Compressor"
 
 log = logging.getLogger(__name__)
@@ -61,6 +61,10 @@ class _PrefixMiddleware:
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "pdf-compressor-dev-key-change-me")
 app.config["MAX_CONTENT_LENGTH"] = MAX_BATCH_MB * 1024 * 1024
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_NAME"] = "plugin_session"
 app.wsgi_app = _PrefixMiddleware(ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1))
 
 auth.init_db()
@@ -281,7 +285,7 @@ def forgot_password():
             request.form.get("employee_id", ""),
             password,
             app_name="PDF Compressor",
-            app_url="https://pdf.cpcl.cloud",
+            app_url=APP_URL,
         )
         if err:
             flash(err, "error")
@@ -667,6 +671,7 @@ def job_download(job_id: str):
 
 
 @app.get("/health")
+@app.get("/healthz")
 def health():
     queued = len(list(QUEUE_DIR.glob("*.json"))) if QUEUE_DIR.exists() else 0
     return jsonify(

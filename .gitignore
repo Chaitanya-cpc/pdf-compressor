@@ -3,5 +3,7 @@ venv/
 __pycache__/
 *.pyc
 data/jobs/
+data/queue/
+data/history/
 .env
 *.pdf

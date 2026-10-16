@@ -1,0 +1,16 @@
+[Unit]
+Description=Erudore PDF compressor worker
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/webapps/plugin
+Environment=APP_URL=https://plugin.erudore.com
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/root/webapps/plugin/env
+ExecStart=/root/webapps/plugin/venv/bin/python worker.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

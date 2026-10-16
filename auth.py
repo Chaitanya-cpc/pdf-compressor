@@ -14,7 +14,7 @@ from functools import wraps
 from flask import session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
-DB_PATH = '/root/webapps/shared_users.db'
+DB_PATH = os.environ.get("SHARED_USERS_DB", "/root/webapps/shared_users.db")
 
 log = logging.getLogger(__name__)
 if not log.handlers:

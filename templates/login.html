@@ -1,56 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login — PDF Compressor</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
-      font-family:"IBM Plex Sans",sans-serif; background:#0b1220; color:#e5e7eb;
-      background-image: radial-gradient(800px 400px at 15% 0%, rgba(100,116,139,.22), transparent 55%),
-        radial-gradient(600px 300px at 90% 100%, rgba(14,165,233,.12), transparent 50%); }
-    .card { width:100%; max-width:400px; margin:16px; border:1px solid rgba(148,163,184,.35); border-radius:12px; overflow:hidden; background:#111827; }
-    .head { padding:22px; background:linear-gradient(90deg,#475569,#0ea5e9); }
-    .head h1 { margin:0; font-size:1.15rem; color:#fff; }
-    .head p { margin:4px 0 0; color:rgba(255,255,255,.8); font-size:.85rem; }
-    .body { padding:22px; }
-    label { display:block; color:#94a3b8; font-size:.88rem; margin:0 0 6px; }
-    input { width:100%; box-sizing:border-box; margin-bottom:14px; padding:10px 12px; border-radius:8px; border:1px solid rgba(148,163,184,.35); background:#0b1220; color:#e5e7eb; font:inherit; }
-    button { width:100%; border:0; border-radius:999px; padding:11px; font:inherit; font-weight:600; color:#fff; background:linear-gradient(90deg,#475569,#0ea5e9); cursor:pointer; }
-    .flash { margin-bottom:12px; padding:10px; border-radius:8px; background:rgba(248,113,113,.12); border:1px solid rgba(248,113,113,.4); color:#fecaca; font-size:.9rem; }
-    .flash.ok { background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.4); color:#86efac; }
-    .foot { text-align:center; margin-top:14px; color:#64748b; font-size:.88rem; }
-    a { color:#38bdf8; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="head">
-      <h1>PDF Compressor</h1>
-      <p>Chaitanya Projects Consultancy Ltd.</p>
-    </div>
-    <div class="body">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
-      {% endwith %}
-      <form method="post">
-        <label>Employee ID</label>
-        <input name="employee_id" required autocomplete="username" autofocus>
-        <label>Password</label>
-        <input type="password" name="password" required autocomplete="current-password">
-        <button type="submit">Sign in</button>
-      </form>
-      <div class="foot">No account? <a href="{{ url_for('register') }}">Register</a>
-        · <a href="{{ url_for('forgot_password') }}">Forgot password?</a></div>
-    </div>
-  </div>
-<p class="cpcl-devmark">developer - chaitanya shashwat</p>
-<style>
-.cpcl-devmark{position:fixed;right:12px;bottom:8px;z-index:80;margin:0;font:11px/1.2 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;color:#7a8494;pointer-events:none}
-html[data-theme="dark"] .cpcl-devmark{color:#8b97a6}
-</style>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<section class="gate card">
+  <h1>Sign in</h1>
+  <form method="post">
+    <label for="employee_id">Employee ID</label>
+    <input id="employee_id" name="employee_id" type="text" required autocomplete="username" autofocus>
+    <label for="password">Password</label>
+    <input id="password" type="password" name="password" required autocomplete="current-password">
+    <button class="btn" type="submit">Sign in</button>
+  </form>
+  <p class="foot">No account? <a href="{{ url_for('register') }}">Register</a>
+    · <a href="{{ url_for('forgot_password') }}">Forgot password</a></p>
+</section>
+{% endblock %}

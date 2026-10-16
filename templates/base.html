@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>{% block title %}PDF Compressor{% endblock %} — Erudore</title>
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("erudore-theme");
+        if (saved === "dark" || saved === "light") document.documentElement.setAttribute("data-theme", saved);
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    :root {
+      --bg: #efe8dc; --bg-2: #f7f3ec; --panel: rgba(255, 252, 247, 0.94);
+      --nav: #1c2430; --nav-text: #f6f1e8; --navy: #1c2430; --line: #e3d9c8;
+      --text: #1c2430; --muted: #5e6874; --gold: #b8893d; --gold-2: #e4c88a;
+      --field: #fffdf9; --row: #fffdf9; --btn: #1c2430; --btn-text: #f6f1e8;
+      --ok-bg: #e7f3ea; --ok-line: #b7d7b8; --ok-text: #1e5b32;
+      --err-bg: #fdf2f0; --err-line: #e4b6af; --danger: #8f3d32;
+      --shadow: 0 18px 40px rgba(28, 36, 48, 0.07);
+    }
+    html[data-theme="dark"] {
+      --bg: #0e1218; --bg-2: #151b24; --panel: rgba(26, 33, 44, 0.94);
+      --nav: #0c1016; --nav-text: #f3efe6; --navy: #f3efe6; --line: #2c3644;
+      --text: #eef2f6; --muted: #a3b0bf; --gold: #d4b483; --gold-2: #f0d7a4;
+      --field: #121820; --row: #121820; --btn: #f3efe6; --btn-text: #1c2430;
+      --ok-bg: #163024; --ok-line: #2f6a45; --ok-text: #cfe6d4;
+      --err-bg: #3a221e; --err-line: #8a4d43; --danger: #f0c2ba;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; line-height: 1.5; color: var(--text);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(900px 420px at 0% -10%, rgba(184, 137, 61, 0.28), transparent 55%),
+        linear-gradient(180deg, var(--bg-2), var(--bg));
+    }
+    a { color: var(--gold); }
+    .nav { background: var(--nav); color: var(--nav-text); border-bottom: 3px solid var(--gold); position: sticky; top: 0; z-index: 10; }
+    .nav-inner, .wrap { max-width: 820px; margin: 0 auto; padding: 12px 20px; }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .brand { color: var(--nav-text); text-decoration: none; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.92rem; }
+    .brand small { display: inline; margin-left: 8px; color: var(--gold); font-weight: 500; letter-spacing: 0.04em; font-size: 0.78rem; text-transform: none; }
+    .nav-links { display: flex; gap: 14px; align-items: center; color: var(--nav-text); font-size: 0.92rem; }
+    .nav-links a { color: var(--nav-text); text-decoration: none; }
+    .theme { min-height: 32px; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(246, 241, 232, 0.28); background: transparent; color: var(--nav-text); font: inherit; font-size: 0.85rem; cursor: pointer; }
+    h1 { font-size: 1.25rem; font-weight: 650; margin: 16px 0 12px; }
+    .sub { color: var(--muted); margin: 0 0 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+    .flash { border-radius: 4px; padding: 10px 12px; margin: 12px 0; }
+    .flash.ok { background: var(--ok-bg); border: 1px solid var(--ok-line); color: var(--ok-text); }
+    .flash.error { background: var(--err-bg); border: 1px solid var(--err-line); color: var(--danger); }
+    label { display: block; font-size: 0.9rem; color: var(--text); margin: 14px 0 6px; }
+    input:not([type="checkbox"]) { width: 100%; padding: 9px 11px; border-radius: 4px; border: 1px solid var(--line); background: var(--field); color: var(--text); font: inherit; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 16px; border-radius: 999px; border: 1px solid transparent; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; background: var(--btn); color: var(--btn-text); }
+    .gate { max-width: 420px; margin: 48px auto; }
+    .gate .btn { width: 100%; margin-top: 6px; }
+    .foot { text-align: center; margin-top: 14px; color: var(--muted); font-size: 0.92rem; }
+    .cpcl-devmark { position: fixed; right: 12px; bottom: 8px; z-index: 80; margin: 0; font: 11px/1.2 "Segoe UI", sans-serif; color: #7a8494; pointer-events: none; }
+    html[data-theme="dark"] .cpcl-devmark { color: #8b97a6; }
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="{{ url_for('index') }}">Erudore<small>PDF Compressor</small></a>
+      <nav class="nav-links">
+        <button class="theme" id="theme" type="button">Dark</button>
+        {% if current_user %}
+          <span>{{ current_user.name or current_user.employee_id }}</span>
+          <a href="{{ url_for('logout') }}">Logout</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash {{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    (function () {
+      var button = document.getElementById("theme");
+      function apply(theme) {
+        document.documentElement.setAttribute("data-theme", theme);
+        if (button) button.textContent = theme === "dark" ? "Light" : "Dark";
+        try { localStorage.setItem("erudore-theme", theme); } catch (e) {}
+      }
+      apply(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
+      if (button) button.addEventListener("click", function () {
+        apply(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+      });
+    })();
+  </script>
+  <p class="cpcl-devmark">developer - chaitanya shashwat</p>
+</body>
+</html>
