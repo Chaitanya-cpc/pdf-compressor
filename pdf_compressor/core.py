@@ -20,11 +20,12 @@ Strategy = Literal["quality", "fast"]
 MONO_CANDIDATES = [
     3300, 3000, 2800, 2600, 2500, 2400, 2350, 2300, 2200,
     2000, 1900, 1750, 1650, 1500, 1350, 1200, 1050, 900, 800,
+    650, 500, 380, 280,
 ]
-GRAY_LONG_EDGES = [2000, 1750, 1500, 1300, 1150, 1000, 900, 800, 720, 640]
-GRAY_QUALITIES = [85, 80, 75, 70, 65, 55, 45, 35, 25]
-COLOR_LONG_EDGES = [2200, 2000, 1750, 1500, 1300, 1150, 1000, 900, 800, 720, 640, 560]
-COLOR_QUALITIES = [85, 80, 75, 70, 65, 55, 45, 35, 28, 22]
+GRAY_LONG_EDGES = [2000, 1750, 1500, 1300, 1150, 1000, 900, 800, 720, 640, 480, 360, 260]
+GRAY_QUALITIES = [85, 80, 75, 70, 65, 55, 45, 35, 25, 16, 10]
+COLOR_LONG_EDGES = [2200, 2000, 1750, 1500, 1300, 1150, 1000, 900, 800, 720, 640, 560, 400, 280]
+COLOR_QUALITIES = [85, 80, 75, 70, 65, 55, 45, 35, 28, 22, 14, 10]
 
 # Fast strategy: few coarse steps (online-tool style size crush)
 FAST_MONO_CANDIDATES = [1800, 1200, 900, 700, 500]
@@ -438,40 +439,106 @@ def _binary_search_settings(
     pct_hi: float,
     clarity_check: Callable[[object], bool] | None = None,
 ) -> tuple[object, int] | None:
+    """Find the sharpest setting that fits.
+
+    The last encode is often not the winner: a later sharper probe can miss
+    the target and leave that larger file on disk. When that happens, encode
+    the winner again. If the binary search misses a fit on a sawtooth ladder,
+    probe the eight smallest settings from small toward large.
+    """
     lo, hi = 0, len(settings) - 1
     best: tuple[object, int] | None = None
     attempts = 0
     total_est = max(1, int(math.log2(max(len(settings), 2)) + 2))
+    last_setting = None
+    last_size: int | None = None
 
-    while lo <= hi:
+    def remember(setting, size: int, pct: float, eta: float | None) -> bool:
+        nonlocal best
+        if size > target_bytes:
+            return False
+        ok = True
+        if clarity_check:
+            ok = clarity_check(setting)
+            if not ok:
+                _emit(on_progress, f"Clarity gate rejected {setting}", pct, eta)
+        if ok:
+            best = (setting, size)
+            return True
+        if best is None:
+            best = (setting, size)
+        return False
+
+    def probe(setting):
+        nonlocal attempts, last_setting, last_size
         _check_cancel(cancel)
-        mid = (lo + hi) // 2
-        setting = settings[mid]
         attempts += 1
         elapsed = time.time() - started
         eta = (elapsed / attempts) * max(0, total_est - attempts) if attempts else None
         pct = pct_lo + (pct_hi - pct_lo) * min(1.0, attempts / total_est)
         size = try_fn(setting)
+        last_setting = setting
+        last_size = size
         _emit(
             on_progress,
             f"{label} {setting} → {size / 1024 / 1024:5.2f} MB",
             min(pct_hi, pct),
             eta,
         )
+        return size, pct, eta
+
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        size, pct, eta = probe(settings[mid])
         if size <= target_bytes:
-            ok = True
-            if clarity_check:
-                ok = clarity_check(setting)
-                if not ok:
-                    _emit(on_progress, f"Clarity gate rejected {setting}", pct, eta)
-            if ok:
-                best = (setting, size)
-            elif best is None:
-                best = (setting, size)
+            remember(settings[mid], size, pct, eta)
             hi = mid - 1
         else:
             lo = mid + 1
+
+    if best is None and settings:
+        for setting in reversed(settings[-8:]):
+            if setting == last_setting and last_size is not None:
+                size, pct, eta = last_size, pct_hi, None
+            else:
+                size, pct, eta = probe(setting)
+            if remember(setting, size, pct, eta):
+                break
+
+    if best is not None and best[0] != last_setting:
+        size, _, _ = probe(best[0])
+        best = (best[0], size)
     return best
+
+
+def split_part_targets(page_count: int, pages_per_part: int, target_bytes: int) -> list[int]:
+    """Byte budget for each auto-split part. The sum fits under the merged target.
+
+    A reserve is held back so the merged PDF, not each part, is what the
+    slider limits. Sharing the full target with every part made long files
+    download larger than the size the user picked.
+    """
+    page_count = int(page_count)
+    pages_per_part = int(pages_per_part)
+    target_bytes = int(target_bytes)
+    if page_count <= 0 or pages_per_part <= 0 or target_bytes <= 0:
+        return []
+    counts: list[int] = []
+    left = page_count
+    while left > 0:
+        take = min(pages_per_part, left)
+        counts.append(take)
+        left -= take
+    nparts = len(counts)
+    reserve = min(max(target_bytes / 50, 32 * 1024), target_bytes / 5)
+    budget = max(nparts, int(target_bytes - reserve))
+    parts = [max(1, int(budget * counts[i] / page_count)) for i in range(nparts)]
+    while sum(parts) > budget and any(size > 1 for size in parts):
+        idx = max(range(nparts), key=lambda i: parts[i])
+        if parts[idx] <= 1:
+            break
+        parts[idx] -= 1
+    return parts
 
 
 def _mono_settings(strategy: Strategy = "quality"):
@@ -742,10 +809,20 @@ def compress_pdf(
         split_dir = dst.parent / f"{dst.stem}_parts"
         parts = split_pdf_by_pages(src, split_dir, split_pages, password)
         if parts:
+            budgets = split_part_targets(page_count, split_pages, target_bytes)
+            if len(budgets) != len(parts):
+                raise RuntimeError("Split budget count does not match part count.")
             notes = []
             for i, part in enumerate(parts):
                 _check_cancel(cancel)
                 part_out = split_dir / f"{i:03d}_compressed.pdf"
+                part_mb = budgets[i] / (1024 * 1024)
+                _emit(
+                    progress,
+                    f"Part {i + 1}/{len(parts)} budget {part_mb:.2f} MB "
+                    f"(merged target {target_mb:.2f} MB)…",
+                    8,
+                )
                 # Remap force-colour pages into this part's local 1-based indices
                 part_start = i * split_pages + 1
                 part_end = part_start + split_pages - 1
@@ -756,7 +833,7 @@ def compress_pdf(
                 }
                 sub = compress_pdf(
                     part,
-                    target_mb,
+                    part_mb,
                     part_out,
                     mode="auto" if per_page else mode,
                     on_progress=on_progress,
@@ -773,14 +850,27 @@ def compress_pdf(
                 part_paths.append(sub.output_path)
                 notes.append(f"part{i + 1}:{sub.mode}")
             merged = pymupdf.open()
-            for p in part_paths:
-                merged.insert_pdf(pymupdf.open(p))
-            merged.save(dst)
-            merged.close()
+            try:
+                for p in part_paths:
+                    src_doc = pymupdf.open(p)
+                    try:
+                        merged.insert_pdf(src_doc)
+                    finally:
+                        src_doc.close()
+                merged.save(dst)
+            finally:
+                merged.close()
             compressed_bytes = dst.stat().st_size
+            if compressed_bytes > target_bytes:
+                raise RuntimeError(
+                    f"Merged file is {compressed_bytes / 1024 / 1024:.2f} MB, "
+                    f"over the {target_mb:.2f} MB target."
+                )
             note = (
-                f"Auto-split into {len(part_paths)} parts (~{split_pages} pages each); "
-                f"merged download included. [{', '.join(notes)}]"
+                f"Auto-split into {len(part_paths)} parts; "
+                f"the {target_mb:.2f} MB target was shared across the parts. "
+                f"Merged size {compressed_bytes / 1024 / 1024:.2f} MB. "
+                f"[{', '.join(notes)}]"
             )
             if preview_dir:
                 try:
@@ -896,6 +986,10 @@ def compress_pdf(
                 )
             long_edge, jpeg_quality, compressed_bytes, clarity_score = result
             selected_mode = "gray"
+
+    compressed_bytes = dst.stat().st_size
+    if compressed_bytes > target_bytes:
+        raise RuntimeError(f"Could not compress below {target_mb:.2f} MB.")
 
     if preview_dir is not None:
         try:
