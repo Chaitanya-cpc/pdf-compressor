@@ -105,9 +105,13 @@ def _write_status(job_id: str, **fields) -> dict:
             data = json.loads(path.read_text())
         except json.JSONDecodeError:
             data = {}
+    previous_status = data.get("status")
     data.update(fields)
     data["updated_at"] = _utcnow().isoformat()
     path.write_text(json.dumps(data, indent=2))
+    from runlog import note_status
+
+    note_status("plugin", JOBS_DIR.parent, job_id, previous_status, data)
     return data
 
 

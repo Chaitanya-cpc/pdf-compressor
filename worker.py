@@ -47,11 +47,15 @@ def _read_json(path: Path) -> dict:
 def _write_status(job_id: str, **fields) -> dict:
     path = _job_dir(job_id) / "status.json"
     data = _read_json(path) if path.exists() else {}
+    previous_status = data.get("status")
     data.update(fields)
     data["updated_at"] = _utcnow()
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, indent=2))
     tmp.replace(path)
+    from runlog import note_status
+
+    note_status("plugin", JOBS_DIR.parent, job_id, previous_status, data)
     return data
 
 
