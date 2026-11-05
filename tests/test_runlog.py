@@ -42,12 +42,13 @@ class RunLogTests(unittest.TestCase):
                 )
             finally:
                 os.environ.pop("ERUDORE_RUN_LOG", None)
-            lines = [json.loads(line) for line in (data / "run-log.jsonl").read_text().splitlines()]
+            lines = [json.loads(line) for line in shared.read_text().splitlines()]
         self.assertEqual([line["event"] for line in lines], ["started", "finished"])
         self.assertEqual(lines[0]["app"], "gst")
         self.assertNotIn("password", json.dumps(lines))
         self.assertEqual(lines[1]["items"][0]["reference"], "ASSAM")
         self.assertEqual(lines[1]["status"], "done")
+        self.assertFalse((data / "run-log.jsonl").exists())
 
 
 if __name__ == "__main__":

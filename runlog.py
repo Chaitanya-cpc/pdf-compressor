@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -53,6 +54,8 @@ def _items(current: dict) -> list[dict]:
 
 
 def log_run(app: str, event: str, data_dir: Path, **fields) -> None:
+    """One shared text log. Generated PDFs and screenshots are not copied here."""
+    del data_dir
     record = {
         "time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "app": app,
@@ -66,17 +69,26 @@ def log_run(app: str, event: str, data_dir: Path, **fields) -> None:
         else:
             record[key] = _clean(value, 300)
     line = json.dumps(record, ensure_ascii=False, default=str) + "\n"
-    targets = [Path(data_dir) / "run-log.jsonl"]
-    shared = os.environ.get("ERUDORE_RUN_LOG", "/var/log/erudore/runs.jsonl")
-    if shared:
-        targets.append(Path(shared))
-    for path in targets:
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("a", encoding="utf-8") as handle:
-                handle.write(line)
-        except OSError:
-            continue
+    path = Path(os.environ.get("ERUDORE_RUN_LOG", "/var/log/erudore/runs.jsonl"))
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(line)
+    except OSError:
+        return
+
+
+def discard_outputs(job_dir: Path) -> None:
+    """Remove generated screenshots, PDFs, and zip files for a finished run."""
+    if not job_dir.is_dir():
+        return
+    for name in ("output", "pdfs"):
+        target = job_dir / name
+        if target.is_dir():
+            shutil.rmtree(target, ignore_errors=True)
+    for path in list(job_dir.rglob("*")):
+        if path.is_file() and path.suffix.lower() in {".png", ".pdf", ".zip"}:
+            path.unlink(missing_ok=True)
 
 
 def note_status(app: str, data_dir: Path, job_id: str, previous_status: str | None, current: dict) -> None:
@@ -109,5 +121,7 @@ def note_status(app: str, data_dir: Path, job_id: str, previous_status: str | No
         if items:
             fields["items"] = items
         log_run(app, event, data_dir, **fields)
+        if event == "finished":
+            discard_outputs(Path(data_dir) / "jobs" / job_id)
     except Exception:
         return
