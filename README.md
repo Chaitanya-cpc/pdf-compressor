@@ -31,5 +31,5 @@ A new developer should start with **[docs/PRD.md](docs/PRD.md)**. It is the full
 - `MAX_UPLOAD_MB=500`, `MAX_BATCH_MB=500`, `MAX_BATCH_FILES=15`
 - Strategies: **Quality** (ScanClear ladder) vs **Fast** (coarse online-tool style)
 - `MAX_PAGES=3000`, `SPLIT_PAGES=80`, `MAX_DISK_MB=4000`, `MAX_PARALLEL=3`
-- Multi-file: each PDF compressed to the same target **in parallel**; download as **ZIP** (separate) or **merged PDF**
+- Multi-file: each PDF compressed to the same target, two at a time, or one at a time while another Erudore desk has a browser open. Download as **ZIP** (separate) or **merged PDF**. The capture desks share two browser slots. This desk does not take one.
 - Per-page mode: optional force-colour page list (`1,3,5-8`)
