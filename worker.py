@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
+import loadgate
 from pdf_compressor.core import CancelledError, compress_pdf
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -172,10 +173,11 @@ def process_job(job_id: str, payload: dict) -> None:
             }
         )
 
+    workers = loadgate.compressor_workers(max(1, min(MAX_PARALLEL, len(items))))
     _write_status(
         job_id,
         status="running",
-        message=f"Starting {len(items)} file(s) in parallel (target {target_mb} MB each)…",
+        message=f"Starting {len(items)} file(s), {workers} at a time (target {target_mb} MB each)…",
         progress=[],
         files=files_state,
         percent=0,
@@ -285,7 +287,6 @@ def process_job(job_id: str, payload: dict) -> None:
         return i, meta, output_path, dl_name
 
     successes: list[tuple[Path, str]] = []
-    workers = max(1, min(MAX_PARALLEL, len(items)))
 
     try:
         with ThreadPoolExecutor(max_workers=workers) as pool:
