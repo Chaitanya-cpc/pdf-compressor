@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -79,16 +78,8 @@ def log_run(app: str, event: str, data_dir: Path, **fields) -> None:
 
 
 def discard_outputs(job_dir: Path) -> None:
-    """Remove generated screenshots, PDFs, and zip files for a finished run."""
-    if not job_dir.is_dir():
-        return
-    for name in ("output", "pdfs"):
-        target = job_dir / name
-        if target.is_dir():
-            shutil.rmtree(target, ignore_errors=True)
-    for path in list(job_dir.rglob("*")):
-        if path.is_file() and path.suffix.lower() in {".png", ".pdf", ".zip"}:
-            path.unlink(missing_ok=True)
+    """Leave the compressed PDFs and zip. The desk deletes the job folder after an hour."""
+    del job_dir
 
 
 def note_status(app: str, data_dir: Path, job_id: str, previous_status: str | None, current: dict) -> None:

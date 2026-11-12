@@ -50,6 +50,23 @@ class RunLogTests(unittest.TestCase):
         self.assertEqual(lines[1]["status"], "done")
         self.assertFalse((data / "run-log.jsonl").exists())
 
+    def test_a_finished_run_keeps_the_compressed_files(self):
+        with TemporaryDirectory() as folder:
+            data = Path(folder)
+            job = data / "jobs" / "abc"
+            job.mkdir(parents=True)
+            pdf = job / "000_compressed.pdf"
+            archive = job / "compressed.zip"
+            pdf.write_bytes(b"%PDF")
+            archive.write_bytes(b"PK")
+            os.environ["ERUDORE_RUN_LOG"] = str(data / "log.jsonl")
+            try:
+                note_status("plugin", data, "abc", "running", {"status": "done", "message": "Compressed 1 file."})
+            finally:
+                os.environ.pop("ERUDORE_RUN_LOG", None)
+            self.assertEqual(pdf.read_bytes(), b"%PDF")
+            self.assertEqual(archive.read_bytes(), b"PK")
+
 
 if __name__ == "__main__":
     unittest.main()
