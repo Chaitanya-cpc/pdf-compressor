@@ -1,8 +1,6 @@
 # Product requirements: ScanClear PDF Compressor
 
 **Product name:** PDF Compressor (ScanClear)  
-**Live:** https://pdf.cpcl.cloud  
-**Also served at:** https://suite.cpcl.cloud/pdf-compressor/  
 **Audience for this document:** a developer who has never seen the code and must rebuild the same product.
 
 This document is the contract. If the implementation and this document disagree, match this document. It describes the product as it behaves in production, including the rules that keep a download at or under the size the user selected.
@@ -48,7 +46,7 @@ The product is a web application. A browser talks to a Flask HTTP service. Compr
 Browser
   │  HTTPS
   ▼
-nginx (pdf.cpcl.cloud :443, and suite.cpcl.cloud/pdf-compressor/)
+nginx (:443, and an optional /pdf-compressor/ prefix)
   │  proxy to 127.0.0.1:6012
   ▼
 gunicorn (2 workers)  ── Flask app (app.py)
@@ -108,7 +106,7 @@ There is no Node build, no database migration tool, and no Redis.
 
 ## 3. Screens
 
-Visual language: dark panel, one column, readable on a phone. Header shows “PDF Compressor”, “CPCL Suite · ScanClear clarity pipeline”, the signed-in name, a link to https://suite.cpcl.cloud, and Logout.
+Visual language: dark panel, one column, readable on a phone. Header shows “PDF Compressor”, “CPCL Suite · ScanClear clarity pipeline”, the signed-in name, a link to the suite home, and Logout.
 
 ### 3.1 Login, register, forgot password
 
@@ -442,7 +440,7 @@ Registration mail subject: `[CPCL] New Registration Pending Approval — <employ
 
 Reset mail subject: `[CPCL] Password Reset Pending Approval — <employee_id>`. Link is `{APP_URL}/admin/approve-reset/{token}`. Say that the current password still works until approval.
 
-`APP_URL` for this app is `https://pdf.cpcl.cloud`. Tokens are `secrets.token_urlsafe(32)`. Single use because a successful approval clears the token.
+`APP_URL` is the public base URL of this app, supplied by the environment. Tokens are `secrets.token_urlsafe(32)`. Single use because a successful approval clears the token.
 
 Login attempts are rate-limited at nginx on `location = /login` (`limit_req`, burst 3). The app itself does not count failures.
 
@@ -637,7 +635,7 @@ Default output name: `<stem> (compressed).pdf` next to the input. Verbose prints
 | Variable | Where | Default |
 |---|---|---|
 | `FLASK_SECRET_KEY` | web | required in production |
-| `APP_URL` | web | `https://pdf.cpcl.cloud` |
+| `APP_URL` | web | public base URL of this app (environment) |
 | `JOB_TTL_SECONDS` | web | `3600` |
 | `MAX_UPLOAD_MB` | web | `500` |
 | `MAX_BATCH_FILES` | web | `15` |
@@ -657,7 +655,7 @@ Keep web and worker limits equal. If the worker’s `SPLIT_PAGES` differs from t
 
 ### 8.2 nginx
 
-**pdf.cpcl.cloud**
+**Primary site**
 
 - HTTP redirects to HTTPS.
 - TLS via the host’s certificate (Let’s Encrypt in production).
@@ -667,7 +665,7 @@ Keep web and worker limits equal. If the worker’s `SPLIT_PAGES` differs from t
 - `proxy_read_timeout` and `proxy_send_timeout` 1800s.
 - Include the suite’s real-IP and security-header snippets if this host sits behind Cloudflare.
 
-**suite.cpcl.cloud**
+**Path-prefix mount**
 
 ```
 location = /pdf-compressor { return 301 /pdf-compressor/; }
@@ -790,8 +788,8 @@ A rebuild is done when every row below passes. Use synthetic PDFs (embedded JPEG
 
 ### 11.6 Hosting
 
-33. `https://pdf.cpcl.cloud/` redirects anonymous users to `/login` and accepts a 500 MB-class body size at nginx (a slightly-under-limit upload is not rejected with 413).
-34. `https://suite.cpcl.cloud/pdf-compressor/` serves the same app. A compress started there polls and downloads under `/pdf-compressor/api/...`, not under the site root.
+33. The site root redirects anonymous users to `/login` and accepts a 500 MB-class body size at nginx (a slightly-under-limit upload is not rejected with 413).
+34. A path-prefix mount at `/pdf-compressor/` serves the same app. A compress started there polls and downloads under `/pdf-compressor/api/...`, not under the site root.
 
 ---
 

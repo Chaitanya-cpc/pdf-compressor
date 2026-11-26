@@ -1,7 +1,5 @@
 # PDF Compressor (ScanClear)
 
-Web app at **https://plugin.erudore.com**.
-
 A new developer should start with **[docs/PRD.md](docs/PRD.md)**. It is the full product contract: screens, API, auth, the compression algorithm, deployment, and acceptance tests.
 
 ## Features
