@@ -21,10 +21,10 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
-RESERVE_MB = int(os.environ.get("ERUDORE_RESERVE_MB", "2500"))
+RESERVE_MB = int(os.environ.get("ERUDORE_RESERVE_MB", "3000"))
 BROWSER_MB = int(os.environ.get("ERUDORE_BROWSER_MB", "1600"))
-MAX_BROWSERS = int(os.environ.get("ERUDORE_MAX_BROWSERS", "10"))
-COMPRESSOR_MAX = int(os.environ.get("ERUDORE_COMPRESSOR_MAX", "4"))
+MAX_BROWSERS = int(os.environ.get("ERUDORE_MAX_BROWSERS", "14"))
+COMPRESSOR_MAX = int(os.environ.get("ERUDORE_COMPRESSOR_MAX", "6"))
 POLL_SECONDS = float(os.environ.get("ERUDORE_LOAD_POLL", "5"))
 
 def state_dir() -> Path:
