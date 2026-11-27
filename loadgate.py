@@ -3,15 +3,13 @@
 Every desk imports this same gate. Slots live in one directory on the server,
 so a GST run can see that Watchout already has a Chrome.
 
-A browser desk holds one slot for its whole run. Income tax may take a second
-slot only when nobody else is waiting and there is still room for another
-Chrome. A job that cannot start yet waits. It is not dropped, and it is not
-started on top of a full machine.
+A browser desk holds slots for its whole run. Income tax and multi-login
+Watchout may take several slots when nobody else is waiting and memory still
+covers them. A job that cannot start yet waits. It is not dropped.
 
-The numbers come from this 8 GB server, which has no swap. A long Watchout
-search peaked near 0.7 GB. One income-tax client peaked near 1.3 GB. Two of
-those fit. Three Chromes, or two income-tax Chromes plus another desk, are
-what run the box out of memory.
+Defaults target the current KVM 8 box (~8 vCPU / 32 GB). Override with
+ERUDORE_MAX_BROWSERS / ERUDORE_RESERVE_MB / ERUDORE_BROWSER_MB. On a smaller
+host set ERUDORE_MAX_BROWSERS=2.
 """
 
 from __future__ import annotations
@@ -23,11 +21,11 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
-RESERVE_MB = 1800
-BROWSER_MB = 1600
-MAX_BROWSERS = 2
+RESERVE_MB = int(os.environ.get("ERUDORE_RESERVE_MB", "2500"))
+BROWSER_MB = int(os.environ.get("ERUDORE_BROWSER_MB", "1600"))
+MAX_BROWSERS = int(os.environ.get("ERUDORE_MAX_BROWSERS", "10"))
+COMPRESSOR_MAX = int(os.environ.get("ERUDORE_COMPRESSOR_MAX", "4"))
 POLL_SECONDS = float(os.environ.get("ERUDORE_LOAD_POLL", "5"))
-
 
 def state_dir() -> Path:
     path = Path(os.environ.get("ERUDORE_LOAD_DIR", "/var/lib/erudore-load"))
@@ -131,15 +129,15 @@ def compressor_workers(requested: int) -> int:
     current = snapshot()
     if current["browsers"] or available_mb() < RESERVE_MB + 800:
         return 1
-    return max(1, min(int(requested), 2))
+    return max(1, min(int(requested), COMPRESSOR_MAX))
 
 
 @contextmanager
 def borrow(desk: str, want: int = 1, on_wait=None):
     """Hold browser slots until the run finishes. Yields how many were granted.
 
-    `want` may be 2 for income tax. A second slot is taken only when this desk
-    is the only one that wants a browser and memory still covers it.
+    `want` may be several for income tax or multi-login Watchout. Extra
+    slots are taken only when this desk is the only waiter and memory covers them.
     """
     want = max(1, min(int(want), MAX_BROWSERS))
     minimum = 1

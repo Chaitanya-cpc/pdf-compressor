@@ -7,6 +7,18 @@ from loadgate import borrow, compressor_workers, decide, snapshot
 
 
 class DecideTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        os.environ["ERUDORE_MAX_BROWSERS"] = "2"
+        os.environ["ERUDORE_RESERVE_MB"] = "1800"
+        os.environ["ERUDORE_BROWSER_MB"] = "1600"
+        os.environ["ERUDORE_COMPRESSOR_MAX"] = "2"
+        import loadgate
+        loadgate.MAX_BROWSERS = 2
+        loadgate.RESERVE_MB = 1800
+        loadgate.BROWSER_MB = 1600
+        loadgate.COMPRESSOR_MAX = 2
+
     def test_a_free_server_can_take_two_browsers(self):
         self.assertEqual(decide(0, 8000, want=2, minimum=1, others_waiting=False, older_waiting=False), 2)
 
@@ -24,6 +36,18 @@ class DecideTests(unittest.TestCase):
 
 
 class GateTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        os.environ["ERUDORE_MAX_BROWSERS"] = "2"
+        os.environ["ERUDORE_RESERVE_MB"] = "1800"
+        os.environ["ERUDORE_BROWSER_MB"] = "1600"
+        os.environ["ERUDORE_COMPRESSOR_MAX"] = "2"
+        import loadgate
+        loadgate.MAX_BROWSERS = 2
+        loadgate.RESERVE_MB = 1800
+        loadgate.BROWSER_MB = 1600
+        loadgate.COMPRESSOR_MAX = 2
+
     def test_a_busy_desk_lets_the_next_one_start_with_one_browser(self):
         with TemporaryDirectory() as folder:
             os.environ["ERUDORE_LOAD_DIR"] = folder
